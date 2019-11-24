@@ -1,0 +1,10 @@
+[
+  {
+    "client": "ethereum",
+    "endpoint": "http://localhost:8545"
+  },
+  {
+    "client": "bitcoin",
+    "endpoint": "http://localhost:8332"
+  }
+]

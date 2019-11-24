@@ -1,0 +1,11 @@
+[{
+  "inputs": [{
+    "txid": "cac72cd444136cd8cbb4cad2e7b492438006ad3a05f9c22127ddc30d4e524e44",
+    "vout": 0,
+    "sequence": "76a914bfa3e62143870a4143e8224d7ce614d6c6829ce388ac"
+  }],
+  "outputs": [{
+    "1JUJQYCgmyYr8Q8TLiutzZXXNW8ybwCan2": 1.00678166
+  }],
+  "result": "0200000001444e524e0dc3dd2721c2f9053aad06804392b4e7d2cab4cbd86c1344d42cc7ca0000000000ffffffff01163a0006000000001976a914bfa3e62143870a4143e8224d7ce614d6c6829ce388ac00000000"
+}]
