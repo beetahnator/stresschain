@@ -6,3 +6,6 @@ test::
 
 stresstest:: 
 	CLIENT_ENDPOINT=$(endpoint) k6 run --vus $(users) --duration $(duration) clients/$(client)/stresstest.js --out json=results.json
+
+testall:
+	node test-all-endpoints.js
