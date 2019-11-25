@@ -7,16 +7,23 @@ Currently, tests are only built to target the `JSON-RPC` spec for Bitcoin and Et
 
 # Usage
 
-There is a `Makefile` for the project which accepts two arguments, `client` and `endpoint`
+Before running anything, make sure you have [k6](https://docs.k6.io/docs/installation) installed along with Node.JS. You'll also need `make` to run the `Makefile` for the project.
+
+Running `make test` runs a single test once, `make stresstest` runs with 10 virtual users for 30 seconds. The duration and amount of users can be modified.
+
+- `client`: which client type to test `bitcoin/ethereum`
+- `endpoint`: HTTP URL for the node to test
+- `users`: Number of users to simulate
+- `duration`: How long `stresstest` should run for
 
 Example:
 
 ```shell
 $ make test client=bitcoin endpoint=http://localhost:8332
-...
+$ make stresstest client=bitcoin endpoint=http://localhost:8332 users=1000
 
 $ make test client=ethereum endpoint=http://localhost:8545
-...
+$ make stresstest client=ethereum endpoint=http://localhost:8545 duration=90s
 ```
 
 #### Test Results
