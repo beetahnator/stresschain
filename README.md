@@ -1,17 +1,30 @@
 # stresschain
 
+[![CircleCI](https://circleci.com/gh/mazamats/stresschain/tree/master.svg?style=svg&circle-token=ce36620890b54856c4feca4c1254b54ef49a9d5f)](https://circleci.com/gh/mazamats/stresschain/tree/master)
+
 Load-testing framework made for blockchain nodes like `bitcoind` and `parity` using the [K6 Performance Testing Tool](https://k6.io). Built for service providers and exchanges that run blockchain nodes at scale which require maximum uptime.
 
-Currently, tests are only built to target the `JSON-RPC` spec for Bitcoin and Ethereum. For standard UTXO blockchains (bitcoin forks), this is sufficient. For Ethereum, more could be tested like the `web3` API or Websockets.
+- [stresschain](#stresschain)
+  - [Usage](#usage)
+    - [Running Tests Locally](#running-tests-locally)
+    - [Automated Testing &amp; Reporting](#automated-testing-amp-reporting)
+  - [Development](#development)
+    - [Project Structure](#project-structure)
+    - [Requirements](#requirements)
+    - [Adding a new client type](#adding-a-new-client-type)
+      - [config.ts](#configts)
+      - [stresstest.js](#stresstestjs)
+    - [Extending Automated Deploys and Reporting](#extending-automated-deploys-and-reporting)
 
+## Usage
 
-# Usage
+### Running Tests Locally
 
-Before running anything, make sure you have [k6](https://docs.k6.io/docs/installation) installed along with Node.JS. You'll also need `make` to run the `Makefile` for the project.
+To run tests locally, use the makefile included with the project. You will need to install [k6](https://docs.k6.io/docs/installation)
 
-Running `make test` runs a single test once, `make stresstest` runs with 10 virtual users for 30 seconds. The duration and amount of users can be modified.
+`$ make test` runs a single test once, `$ make stresstest` runs with 10 virtual users for 30 seconds. The duration and amount of users can be modified.
 
-- `client`: which client type to test `bitcoin/ethereum`
+- `client`: which client type to test `bitcoin/ethereum/geth`
 - `endpoint`: HTTP URL for the node to test
 - `users`: Number of users to simulate
 - `duration`: How long `stresstest` should run for
@@ -19,49 +32,128 @@ Running `make test` runs a single test once, `make stresstest` runs with 10 virt
 Example:
 
 ```shell
-$ make test client=bitcoin endpoint=http://localhost:8332
-$ make stresstest client=bitcoin endpoint=http://localhost:8332 users=1000
+$ make test client=bitcoin endpoint=${ENDPOINT}
+$ make stresstest client=bitcoin endpoint=${ENDPOINT} users=1000
 
-$ make test client=ethereum endpoint=http://localhost:8545
-$ make stresstest client=ethereum endpoint=http://localhost:8545 duration=90s
+$ make test client=parity endpoint=${ENDPOINT}
+$ make stresstest client=parity endpoint=${ENDPOINT} duration=90s
+
+$ make test client=geth endpoint=${ENDPOINT}
+$ make stresstest client=geth endpoint=${ENDPOINT} duration=90s users=50
 ```
 
-#### Test Results
+### Automated Testing & Reporting
 
-Loadtest metics are currently output to `results.json` but they can also be sent to an `InfluxDB` server or `Datadog`. Read more: https://docs.k6.io/docs/results-output
+The project is setup to fetch the latest versions of `parity`, `bitcoind`, and `geth` from Github Releases. This happens every 24 hours via CircleCI but can also be run locally using `$ make deploy`
 
-# Project Structure
+This will deploy a Kubernetes cluster which runs an `InfluxDB` database and `Grafana` frontend for visualizing the reports. (See architecture diagram at the bottom)
+
+Each blockchain client version will deploy the following:
+
+- StatefulSet(Blockchain Client Containers)
+- InfluxDB Database
+- Grafana Dashboard
+- CronJob container that runs loadtests
+
+![High Level Architecture](architecture.png)
+
+## Development
+
+### Project Structure
 
 ```
 stresschain
 |
-|---- README.md                # This document
+|---- .github                    # CI/CD pipeline config and scripts
 |
-|---- test-all-endpoints.js    # Script used for PoC of automated new version testing
+|---- infra                      # Infrastructure Provisioning code for cluster, clients, and loadtests jobs
+|     |---- index.ts             # Wrapper for all resource provisioning
+|     |---- clients.ts           # Functions used to build client configs and create blockchain node resources
+|     |---- cluster.ts           # Functions used to deploy the Kubernetes cluster, Grafana, and Influx Database
+|     |---- loadtest.ts          # Functions used to deploy the K6 Test CronJobs that generate loadtest results
 |
-|---- endpoints.json           # List of endpoints used for PoC of automated new version testing
+|---- clients                    # Parent directory containing client specific directories
+|     |---- <CLIENT>
+|          |---- config.ts       # Config file for client, used by `infra` for automatic provisioning
+|          |---- stresstest.js   # K6 Load Testing file
 |
-|---- results.json             # Output file for test results
+|---- lib                        # Libraries and methods shared across clients
+|     |---- github.ts            # Helper for getting version numbers from Github Releases, used by Pulumi
+|     |---- jsonRPC.js           # Helper for JSON-RPC requests, used by K6
+|     |---- types.ts             # Interface for client configs
 |
-|---- clients                  # Parent directory containing client specific files
-|     |---- bitcoin            # Code implementation of stress tests for bitcoin
-|     |---- ethereum           # Code implementation of stress tests for ethereum
-|
-|---- libs                     # Libraries and methods shared across clients
+|---- Dockerfile                 # Custom K6 Container used for running tests in Kubernetes
 ```
 
-# Testing Methodology
+### Requirements
 
-For every client type (Bitcoin | Ethereum), a virtual user script is created which mimics the actions of an ordinary end-user.
+Before running anything, make sure to install the following tooling.
 
-The scripts live under `clients/$CLIENT/stresstest.js` and should ideally be created based off-of live metric data. The current user behavior is a fist-pass guess at average load-intensive user behavior.
+- [K6](https://docs.k6.io/docs/installation)
+- [Helm 2](https://helm.sh/docs/intro/install/)
+- [Pulumi](https://www.pulumi.com/docs/get-started/install/)
+- Node.JS
+- Docker
+- make (Latest version. On Mac, use `brew install homebrew/core/make`)
 
-# Automated Testing
+### Adding a new client type
 
-This framework can potentially be used to automatically run load-tests against new versions of clients. An example script (`test-all-endpoints.js`) is provided to outline the logic required for the automation.
+To add a new client, create a directory in `clients`. Inside it, we'll need to create a `config.ts` and `stresstest.js`.
 
-# Future improvements
+Example adding `monero`:
 
-- [ ] ETH Websocket Testing
-- [ ] ETH Web3 API Testing
-- [ ] Pull images from Dockerhub for automated tests of new version
+```shell
+$ mkdir clients/monero
+$ touch clients/monero/config.ts
+$ touch clients/monero/stresstest.js
+```
+
+#### `config.ts`
+
+The config is a typescript file with a single exported varible (`config`), this config defines the repositories for the client and the download sources (currently only Dockerhub is supported).
+
+There is an interface for building the configs in `lib/types.ts` that should be used.
+
+Example `clients/monero/config.ts`:
+
+```typescript
+import { clientArgs } from '../../lib/types';
+
+export const config: clientArgs = {
+  name: "monero",                          // Name for the project
+  githubRepo: "monero-project/monero",     // Github Repository name
+  oldestRelease: "v0.15.0.0",              // Oldest release that will get build/deployed/tested
+  container: {                             // Options for running the container
+    dataDirSize: "500Gi",                  // Disk space for blockchain data
+    dockerRepo: "cornfeedhobo/monero",     // Docker repository name
+    command: ["monerod"],                  // Optional, override the `ENTRYPOINT` for the container
+    args: [                                // Optional, override the `CMD` for the container
+      "--rpcbind=0.0.0.0",
+      "--rpcallowip=0.0.0.0/0",
+      "--datadir=/data"
+    ]
+  }
+}
+```
+
+#### `stresstest.js`
+
+The loadtest script that K6 uses is written in a Golang ES6 engine that is similar to Node.JS. Look at `clients/bitcoin/stresstest.js` for an example and consult the [K6 Documentation](https://docs.k6.io/docs) for more detail.
+
+The only requirement for the loadtest script is to parameterize the endpoint using the `CLIENT_ENDPOINT` environment variable. This allows the tests to be run against arbitrary nodes both in the cluster and locally.
+
+P.S. The K6 JS Engine does not use `process.env`, use `__ENV` instead.
+
+Example:
+
+```javascript
+const rpcUrl = __ENV.CLIENT_ENDPOINT
+```
+
+### Extending Automated Deploys and Reporting
+
+To add more functionality to the automation, first extend the `clientArgs` interface in `lib/types.ts`.
+
+Afterwards the Pulumi Typescript code inside of `infra` will need to be updated to work with the new interface.
+
+For adding different download sources or creating custom docker builds for cients, only the client deployment code will need to be updated (`infra/clients.ts`).

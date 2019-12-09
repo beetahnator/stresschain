@@ -1,0 +1,8 @@
+config:
+  aws:region: us-west-2
+  cloudflare:apiToken:
+    secure: AAABAOoE++olDoTcJfRLvKMxfpOzPXeRjLzqGWT7YGHdmfPvhflEgVBr1GntZbRfvuMNBULo4qdzYK3LNmYCGRdIZ00ggGee
+  dns:domain:
+    secure: AAABAGUsKOQ3pm7Q+FWDtVvxAq8KEyrBH1AIuIwJPn4fqy6slx45
+  dns:zoneId:
+    secure: AAABAGEBfe6XTEIFy3Evt27lHP4vNFOlkMr/VuSKur0d5Bgr4Rv7S/jwde1bJ5x+dgk7u0bY72wVGEeDSuoYLQ==

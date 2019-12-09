@@ -1,1 +1,3 @@
-results.json
+node_modules
+yarn.lock
+infra/node_modules

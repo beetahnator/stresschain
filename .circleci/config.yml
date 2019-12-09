@@ -1,0 +1,46 @@
+version: 2.1
+executors:
+  pulumi:
+    docker:
+      - image: pulumi/pulumi
+
+jobs:
+  make:
+    executor: pulumi
+    parameters:
+      action:
+        description: make action
+        type: string
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: login to ecr repository
+          command: aws ecr get-login --region=us-west-2 --no-include-email | sh
+      - run:
+          name: Install Dependencies
+          command: .circleci/setup.sh
+      - run:
+          name: Link custom provider sdks
+          command: yarn link @pulumi/grafana && yarn link @pulumi/influxdb
+      - run:
+          name: Download NPM modules
+          command: yarn
+      - run:
+          name: make << parameters.action >>
+          command: make << parameters.action >>
+
+workflows:
+  version: 2
+#    triggers:
+#    - schedule:
+#        cron: "0 12 * * *"
+#        filters:
+#          branches:
+#            only:
+#              - master
+  deploy:
+    jobs:
+      - make:
+          name: Deploy Clients & Tests
+          action: deploy
