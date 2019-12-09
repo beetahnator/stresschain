@@ -1,0 +1,3 @@
+name: stresschain
+runtime: nodejs
+description: Load Testing Framework for Blockchain Node Clients.
